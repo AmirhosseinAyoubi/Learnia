@@ -1,0 +1,38 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: learnia-document-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/learnia_document_db
+    username: ${DB_USERNAME:learnia_user}
+    password: ${DB_PASSWORD:learnia_pass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:/tmp/learnia/uploads}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

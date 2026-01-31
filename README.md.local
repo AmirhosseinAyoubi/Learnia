@@ -1,0 +1,359 @@
+# Learnia API - Hybrid Microservices Platform
+
+The Learnia API is a RESTful microservices platform that transforms passive course materials into interactive, AI-powered learning experiences. This project combines **Spring Boot** (for enterprise infrastructure and core services) with **Python/FastAPI** (for AI/ML-heavy services) to leverage the strengths of both technologies.
+
+## 🏗️ Architecture Overview
+
+### Hybrid Microservices Approach
+
+This project uses a hybrid architecture:
+- **Spring Boot Services**: Handle infrastructure, authentication, and core business logic
+- **Python Services**: Handle AI/ML operations, document processing, and embeddings
+
+### Service Breakdown
+
+#### Spring Boot Services (Infrastructure & Core)
+1. **API Gateway** (Port 8080) - Single entry point, routes to all services
+2. **Eureka Server** (Port 8761) - Service discovery for Java services
+3. **Config Server** (Port 8888) - Centralized configuration management
+4. **Auth Service** (Port 8081) - JWT authentication and authorization
+5. **User Service** (Port 8082) - User management and profiles
+6. **Course Service** (Port 8083) - Course management and enrollment
+7. **Document Service** (Port 8084) - Document metadata and file storage
+
+#### Python Services (AI/ML & Processing)
+8. **Processing Service** (Port 8001) - Document processing (PDF, PPTX, TXT)
+9. **Content Service** (Port 8002) - Content chunks, embeddings, semantic search
+10. **AI Service** (Port 8003) - OpenAI integration, answer/quiz generation
+11. **Question Service** (Port 8004) - Q&A management and orchestration
+12. **Quiz Service** (Port 8005) - Quiz generation and attempt tracking
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Java 17+** and **Maven 3.8+**
+- **Python 3.11+** and **pip**
+- **Docker** and **Docker Compose**
+- **PostgreSQL 15+** (or use Docker)
+- **OpenAI API Key** (for AI features)
+
+### Step 1: Clone and Setup
+
+```bash
+git clone <repository-url>
+cd learnia
+```
+
+### Step 2: Start Infrastructure Services
+
+Start PostgreSQL, Redis, and RabbitMQ using Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+This will start:
+- PostgreSQL (port 5432) with pgvector extension
+- Redis (port 6379)
+- RabbitMQ (port 5672, management UI on 15672)
+
+### Step 3: Configure Environment Variables
+
+Copy the environment template:
+
+```bash
+cp env.template .env
+```
+
+Edit `.env` and set:
+- `OPENAI_API_KEY` - Your OpenAI API key
+- `JWT_SECRET` - A secure secret key for JWT tokens
+- Database credentials (defaults are fine for local development)
+
+### Step 4: Start Spring Boot Services
+
+#### Option A: Start All Services (Recommended for Development)
+
+```bash
+cd spring-boot-services
+mvn clean install
+mvn spring-boot:run -pl learnia-eureka-server
+mvn spring-boot:run -pl learnia-config-server
+mvn spring-boot:run -pl learnia-gateway
+mvn spring-boot:run -pl learnia-auth-service
+mvn spring-boot:run -pl learnia-user-service
+mvn spring-boot:run -pl learnia-course-service
+mvn spring-boot:run -pl learnia-document-service
+```
+
+#### Option B: Start Services Individually
+
+In separate terminal windows:
+
+```bash
+# Terminal 1: Eureka Server
+cd spring-boot-services/learnia-eureka-server
+mvn spring-boot:run
+
+# Terminal 2: Config Server
+cd spring-boot-services/learnia-config-server
+mvn spring-boot:run
+
+# Terminal 3: API Gateway
+cd spring-boot-services/learnia-gateway
+mvn spring-boot:run
+
+# Terminal 4-7: Other services...
+```
+
+### Step 5: Start Python Services
+
+For each Python service, create a virtual environment and install dependencies:
+
+```bash
+# Processing Service
+cd python-services/processing-service
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn src.main:app --port 8001 --reload
+
+# Content Service
+cd python-services/content-service
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --port 8002 --reload
+
+# AI Service
+cd python-services/ai-service
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --port 8003 --reload
+
+# Question Service
+cd python-services/question-service
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --port 8004 --reload
+
+# Quiz Service
+cd python-services/quiz-service
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --port 8005 --reload
+```
+
+### Step 6: Verify Services
+
+- **API Gateway**: http://localhost:8080
+- **Eureka Dashboard**: http://localhost:8761
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+- **Python Service Docs**: 
+  - Processing: http://localhost:8001/docs
+  - Content: http://localhost:8002/docs
+  - AI: http://localhost:8003/docs
+  - Question: http://localhost:8004/docs
+  - Quiz: http://localhost:8005/docs
+
+## 📁 Project Structure
+
+```
+learnia/
+├── spring-boot-services/          # Spring Boot microservices
+│   ├── learnia-gateway/           # API Gateway
+│   ├── learnia-eureka-server/    # Service Registry
+│   ├── learnia-config-server/     # Config Server
+│   ├── learnia-auth-service/      # Authentication
+│   ├── learnia-user-service/      # User Management
+│   ├── learnia-course-service/    # Course Management
+│   └── learnia-document-service/  # Document Management
+│
+├── python-services/               # Python/FastAPI microservices
+│   ├── processing-service/        # Document Processing
+│   ├── content-service/          # Content & Embeddings
+│   ├── ai-service/                # AI/LLM Integration
+│   ├── question-service/          # Q&A Service
+│   └── quiz-service/              # Quiz Service
+│
+├── shared/                        # Shared resources
+│   ├── docker/                    # Docker configs
+│   └── scripts/                   # Utility scripts
+│
+├── docs/                          # Documentation
+├── docker-compose.yml             # Infrastructure services
+└── README.md                      # This file
+```
+
+## 🔧 Technology Stack
+
+### Spring Boot Services
+- **Framework**: Spring Boot 3.2+
+- **Service Discovery**: Spring Cloud Eureka
+- **API Gateway**: Spring Cloud Gateway
+- **Database**: PostgreSQL with JPA/Hibernate
+- **Security**: Spring Security + JWT
+- **Build**: Maven
+
+### Python Services
+- **Framework**: FastAPI 0.104+
+- **Database**: PostgreSQL with SQLAlchemy + pgvector
+- **AI/LLM**: OpenAI API
+- **Document Processing**: PyPDF2, python-pptx, pdfplumber
+- **Task Queue**: Celery + RabbitMQ
+- **Caching**: Redis
+
+### Shared Infrastructure
+- **Database**: PostgreSQL 15+ with pgvector
+- **Message Queue**: RabbitMQ
+- **Cache**: Redis
+- **Containerization**: Docker & Docker Compose
+
+## 📡 Service Communication
+
+### Inter-Service Communication
+- **Spring Boot ↔ Spring Boot**: Feign clients (REST)
+- **Spring Boot ↔ Python**: HTTP REST calls
+- **Python ↔ Python**: HTTP REST calls (httpx)
+- **Async Processing**: RabbitMQ (both Java and Python)
+
+### API Gateway Routes
+All requests go through the API Gateway (port 8080):
+- `/api/v1/auth/**` → Auth Service
+- `/api/v1/users/**` → User Service
+- `/api/v1/courses/**` → Course Service
+- `/api/v1/documents/**` → Document Service
+- `/api/v1/processing/**` → Processing Service
+- `/api/v1/content/**` → Content Service
+- `/api/v1/questions/**` → Question Service
+- `/api/v1/quizzes/**` → Quiz Service
+- `/api/v1/ai/**` → AI Service
+
+## 🗄️ Database Strategy
+
+Each service has its own database:
+- `learnia_auth_db` - Auth Service
+- `learnia_user_db` - User Service
+- `learnia_course_db` - Course Service
+- `learnia_document_db` - Document Service
+- `learnia_content_db` - Content Service (with pgvector)
+- `learnia_question_db` - Question Service
+- `learnia_quiz_db` - Quiz Service
+
+All databases are created automatically when you start PostgreSQL via Docker Compose.
+
+## 🛣️ Implementation Roadmap
+
+### Phase 1: Infrastructure Setup (Week 1-2) ✅
+- [x] Project structure
+- [x] Docker Compose setup
+- [x] Service discovery (Eureka)
+- [x] API Gateway
+- [x] Config Server
+
+### Phase 2: Core Spring Boot Services (Week 3-4)
+- [ ] Auth Service (JWT authentication)
+- [ ] User Service (CRUD operations)
+- [ ] Course Service (course management)
+- [ ] Document Service (file upload, metadata)
+
+### Phase 3: Python Processing Services (Week 5-6)
+- [ ] Processing Service (PDF, PPTX, TXT processing)
+- [ ] Content Service (chunking, embeddings, semantic search)
+
+### Phase 4: AI Integration (Week 7-8)
+- [ ] AI Service (OpenAI integration)
+- [ ] Question Service (Q&A orchestration)
+- [ ] Quiz Service (quiz generation)
+
+### Phase 5: Integration & Optimization (Week 9-10)
+- [ ] Service integration
+- [ ] Error handling and retries
+- [ ] Caching (Redis)
+- [ ] Performance optimization
+
+### Phase 6: Testing & Deployment (Week 11-12)
+- [ ] Unit and integration tests
+- [ ] API documentation
+- [ ] Deployment guides
+- [ ] CI/CD pipeline
+
+## 🧪 Testing
+
+### Spring Boot Services
+```bash
+cd spring-boot-services
+mvn test
+```
+
+### Python Services
+```bash
+cd python-services
+pytest
+```
+
+## 📚 API Documentation
+
+- **Spring Boot Services**: Swagger UI available at service endpoints (when implemented)
+- **Python Services**: FastAPI auto-generated docs at `http://localhost:<port>/docs`
+
+## 🔐 Authentication
+
+The API uses JWT tokens for authentication. To authenticate:
+1. POST to `/api/v1/auth/login` with credentials
+2. Receive JWT token
+3. Include token in `Authorization: Bearer <token>` header for subsequent requests
+
+## 🐳 Docker Deployment
+
+Build and run all services with Docker:
+
+```bash
+# Build Spring Boot services
+cd spring-boot-services
+mvn clean package -DskipTests
+
+# Build Python services (create Dockerfiles)
+# Then:
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+## 🤝 Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Write tests
+4. Submit a pull request
+
+## 📝 License
+
+[Add your license here]
+
+## 🆘 Troubleshooting
+
+### Services won't start
+- Check if PostgreSQL, Redis, and RabbitMQ are running
+- Verify ports are not already in use
+- Check application logs
+
+### Database connection errors
+- Ensure PostgreSQL is running: `docker-compose ps`
+- Check database credentials in `.env`
+- Verify databases were created: `docker exec -it learnia-postgres psql -U learnia_user -l`
+
+### Python service import errors
+- Ensure virtual environment is activated
+- Install dependencies: `pip install -r requirements.txt`
+- Check Python version: `python --version` (should be 3.11+)
+
+## 📞 Support
+
+For issues and questions, please open an issue on GitHub.
+
+---
+
+**Note**: This is the initial project structure. Implementation will be done phase by phase according to the roadmap.
