@@ -3,7 +3,7 @@
 # Group information
 * Student 1. Amirhossein Ayoubi amirayoubi2001kh@gmail.com
 * Student 2. Seyedehsahar Fatemi Abhari sahar.fatemiabhari@gmail.com
-* Student 3. Seyedata Jodeiri Seyedian
+* Student 3. Seyedata Jodeiri Seyedian sataseyedian@gmail.com
 * Student 4. Name and email
 
 
