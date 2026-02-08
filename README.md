@@ -1,7 +1,7 @@
 # PWP SPRING 2026
-# PROJECT NAME
+# Learnia
 # Group information
-* Student 1. Name and email
+* Student 1. Amirhossein Ayoubi amirayoubi2001kh@gmail.com
 * Student 2. Name and email
 * Student 3. Name and email
 * Student 4. Name and email
