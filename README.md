@@ -165,47 +165,7 @@ Wait for the health check:
 docker-compose ps  
 ```
 
-### Step 2 — Create all databases and tables
 
-```bash
-./shared/scripts/setup-database.sh
-```
-
-This runs the 7 schema SQL files in order and creates all databases, enums, tables, indexes, and constraints:
-
-```
-shared/docker/postgres/
-  001_auth_service_schema.sql
-  002_user_service_schema.sql
-  003_course_service_schema.sql
-  004_document_service_schema.sql
-  005_content_service_schema.sql  
-  006_question_service_schema.sql
-  007_quiz_service_schema.sql
-```
-
----
-
-## 7. Populating the Database
-
-
-
-```bash
-./shared/scripts/seed-database.sh
-```
-
-SQL file: [`shared/docker/postgres/seed-data.sql`](shared/docker/postgres/seed-data.sql)
-
-Inserts instances of **every model** across all 7 databases:
-
-| Database | What is seeded |
-|---|---|
-| `learnia_user_db` | 7 users (1 admin, 2 instructors, 4 students) + 7 activity records |
-| `learnia_course_db` | 4 courses, 7 modules, 14 lessons, 6 workspaces, 7 workspace-document links |
-| `learnia_document_db` | 6 documents + 6 processing jobs |
-| `learnia_content_db` | 11 content chunks (embeddings require the running AI service) |
-| `learnia_question_db` | 6 questions + 4 answers |
-| `learnia_quiz_db` | 4 quizzes, 12 questions, 5 attempts, 17 attempt answers |
-| `learnia_auth_db` | No seed needed (tokens are created at runtime) |
+__Remember to include all required documentation and HOWTOs, including how to create and populate the database, how to run and test the API, the url to the entrypoint, instructions on how to setup and run the client, instructions on how to setup and run the axiliary service and instructions on how to deploy the api in a production environment__
 
 
