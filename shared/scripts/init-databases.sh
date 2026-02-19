@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Initialize databases for Learnia services
-# This script should be run after PostgreSQL is started
 
 echo "Initializing Learnia databases..."
 
