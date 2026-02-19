@@ -44,17 +44,6 @@ CREATE TABLE lessons (
     CONSTRAINT fk_lessons_module FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
 );
 
--- Course Enrollments Table
--- Student enrollments in courses
-CREATE TABLE course_enrollments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    course_id UUID NOT NULL,
-    student_id UUID NOT NULL,
-    enrolled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    status enrollment_status NOT NULL DEFAULT 'ACTIVE',
-    CONSTRAINT fk_enrollments_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    CONSTRAINT unique_enrollment UNIQUE (course_id, student_id)
-);
 
 -- Student Workspaces Table
 -- Student-created workspaces for courses (independent per student)

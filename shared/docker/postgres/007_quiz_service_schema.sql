@@ -93,7 +93,7 @@ COMMENT ON TABLE quiz_attempt_answers IS 'Individual answers provided in a quiz 
 COMMENT ON COLUMN quizzes.workspace_id IS 'Reference to workspace ID in course service (UUID)';
 COMMENT ON COLUMN quizzes.document_id IS 'Reference to document ID in document service, NULL if quiz is for general course content';
 COMMENT ON COLUMN quiz_questions.question_type IS 'Type of question: MULTIPLE_CHOICE, TRUE_FALSE, or SHORT_ANSWER';
-COMMENT ON COLUMN quiz_questions.options IS 'JSON object with answer options: {"A": "option1", "B": "option2", ...}';
+COMMENT ON COLUMN quiz_questions.options IS 'JSON object with answer options';
 COMMENT ON COLUMN quiz_questions.correct_answer IS 'The correct answer key';
 COMMENT ON COLUMN quiz_attempts.score IS 'Percentage score (0.00 to 100.00)';
 COMMENT ON COLUMN quiz_attempts.student_id IS 'Reference to user ID in user service (UUID)';
