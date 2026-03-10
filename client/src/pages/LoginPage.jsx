@@ -1,15 +1,16 @@
 /**
- * Login Page
+ * LoginPage — premium glassmorphism design
  */
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../context/authStore'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-function LoginPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const { login } = useAuthStore()
   const navigate = useNavigate()
@@ -19,81 +20,97 @@ function LoginPage() {
     setLoading(true)
 
     const result = await login(email, password)
-    
+
     if (result.success) {
-      toast.success('Login successful!')
+      toast.success('Welcome back! 🎉')
       navigate('/')
     } else {
-      toast.error(result.error || 'Login failed')
+      toast.error(result.error || 'Invalid credentials')
     }
-    
+
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="flex justify-center">
-            <BookOpen className="h-12 w-12 text-primary-600" />
+    <div className="auth-page">
+      {/* Animated background blobs */}
+      <div className="auth-blob auth-blob-1" />
+      <div className="auth-blob auth-blob-2" />
+      <div className="auth-blob auth-blob-3" />
+
+      <div className="auth-card">
+        {/* Logo */}
+        <div className="auth-logo">
+          <div className="auth-logo-icon">
+            <BookOpen size={28} />
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to Learnia
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-              create a new account
-            </Link>
-          </p>
+          <span className="auth-logo-text">Learnia</span>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
+
+        <div className="auth-header">
+          <h1 className="auth-title">Welcome back</h1>
+          <p className="auth-subtitle">Sign in to continue your learning journey</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="email">Email address</label>
+            <input
+              id="email"
+              type="email"
+              required
+              autoComplete="email"
+              className="auth-input"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="password">Password</label>
+            <div className="auth-input-wrapper">
               <input
                 id="password"
-                name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
+                autoComplete="current-password"
+                className="auth-input"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                className="auth-eye-btn"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
+          <button type="submit" disabled={loading} className="auth-btn">
+            {loading ? (
+              <>
+                <Loader2 size={18} className="auth-spinner" />
+                Signing in…
+              </>
+            ) : (
+              <>
+                Sign in
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
         </form>
+
+        <p className="auth-switch">
+          Don't have an account?{' '}
+          <Link to="/register" className="auth-link">Create one free</Link>
+        </p>
       </div>
     </div>
   )
 }
-
-export default LoginPage
