@@ -9,8 +9,8 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(columnDefinition = "UUID")
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "uuid")
     private UUID id;
 
     @Column(nullable = false, unique = true, length = 255)
@@ -29,7 +29,7 @@ public class User {
     private String lastName;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "user_role")
+    @Column(nullable = false, length = 50)
     private UserRole role = UserRole.STUDENT;
 
     @Column(name = "avatar_url", columnDefinition = "TEXT")
