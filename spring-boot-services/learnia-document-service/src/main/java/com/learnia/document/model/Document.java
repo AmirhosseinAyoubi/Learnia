@@ -37,7 +37,7 @@ public class Document {
     private UUID workspaceId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "processing_status", nullable = false, columnDefinition = "processing_status")
+    @Column(name = "processing_status", nullable = false)
     private ProcessingStatus processingStatus = ProcessingStatus.PENDING;
 
     @Column(name = "processing_error", columnDefinition = "TEXT")
