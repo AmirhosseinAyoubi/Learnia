@@ -2,6 +2,8 @@ server:
   port: 8084
 
 spring:
+  config:
+    import: "optional:configserver:"
   application:
     name: learnia-document-service
   datasource:
@@ -11,7 +13,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
