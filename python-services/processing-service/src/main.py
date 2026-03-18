@@ -1,17 +1,23 @@
 """
 Learnia Processing Service
-Handles document processing (PDF, PPTX, TXT) and text chunking
+Handles document processing (PDF, PPTX, TXT) and text chunking.
+
+Endpoints:
+    GET  /api/v1/processing/health  — service health check
+    POST /api/v1/processing/process — upload a document, receive text chunks
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from .routers import router
 
 app = FastAPI(
     title="Learnia Processing Service",
     description="Document processing and text chunking service",
-    version="1.0.0"
+    version="1.0.0",
 )
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,15 +26,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "processing-service"}
+# Register the processing router (health + process endpoints)
+app.include_router(router)
+
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
+    """Root endpoint — service info."""
     return {"message": "Learnia Processing Service", "version": "1.0.0"}
+
 
 if __name__ == "__main__":
     import uvicorn

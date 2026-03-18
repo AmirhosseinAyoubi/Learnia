@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY pom.xml .
@@ -8,9 +9,9 @@ COPY learnia-auth-service/pom.xml learnia-auth-service/
 COPY learnia-user-service/pom.xml learnia-user-service/
 COPY learnia-course-service/pom.xml learnia-course-service/
 COPY learnia-document-service/pom.xml learnia-document-service/
-
 COPY . .
-RUN mvn package -DskipTests -pl learnia-user-service -am
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn package -DskipTests -pl learnia-user-service -am
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
