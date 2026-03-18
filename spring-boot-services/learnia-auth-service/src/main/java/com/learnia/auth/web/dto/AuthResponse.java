@@ -1,5 +1,8 @@
 package com.learnia.auth.web.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -9,13 +12,16 @@ import java.util.UUID;
  * every API request.
  * refreshToken : long-lived opaque UUID (7 days) — used only to get a new
  * accessToken via /refresh.
- * user : minimal user view so the frontend can render the profile immediately.
+ * user        : minimal user view so the frontend can render the profile immediately.
+ * _links      : HATEOAS navigation links (profile, me, refresh, logout).
  */
 public class AuthResponse {
 
     private String accessToken;
     private String refreshToken;
     private UserView user;
+    @JsonProperty("_links")
+    private Map<String, Map<String, String>> links;
 
     public String getAccessToken() {
         return accessToken;
@@ -39,6 +45,14 @@ public class AuthResponse {
 
     public void setUser(UserView user) {
         this.user = user;
+    }
+
+    public Map<String, Map<String, String>> getLinks() {
+        return links;
+    }
+
+    public void setLinks(Map<String, Map<String, String>> links) {
+        this.links = links;
     }
 
     public static class UserView {

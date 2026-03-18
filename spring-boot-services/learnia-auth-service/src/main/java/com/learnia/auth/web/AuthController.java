@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import com.learnia.auth.client.UserServiceClient;
 
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -271,6 +272,14 @@ public class AuthController {
         userView.setRole(user.getRole() != null ? user.getRole() : "STUDENT");
         userView.setIsVerified(user.getIsVerified() != null ? user.getIsVerified() : false);
         response.setUser(userView);
+
+        // HATEOAS _links — tell the client where to navigate next
+        Map<String, Map<String, String>> links = new LinkedHashMap<>();
+        links.put("profile",  Map.of("href", "/api/v1/users/" + user.getId()));
+        links.put("me",       Map.of("href", "/api/v1/auth/me"));
+        links.put("refresh",  Map.of("href", "/api/v1/auth/refresh"));
+        links.put("logout",   Map.of("href", "/api/v1/auth/logout"));
+        response.setLinks(links);
 
         return response;
     }
