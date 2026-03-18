@@ -1,7 +1,10 @@
-
-
 services:
-  # PostgreSQL Database
+
+  # ─────────────────────────────────────────────
+  # Infrastructure — run these first
+  # docker compose up -d
+  # ─────────────────────────────────────────────
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: learnia-postgres
@@ -22,7 +25,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis
   redis:
     image: redis:7-alpine
     container_name: learnia-redis
@@ -36,7 +38,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # RabbitMQ
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: learnia-rabbitmq
@@ -46,81 +47,13 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    networks:
+      - learnia-net
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Spring Boot Services
-  eureka:
-    build:
-      context: ./spring-boot-services
-      dockerfile: Dockerfile.eureka
-    container_name: learnia-eureka
-    ports:
-      - "8761:8761"
-    networks:
-      - learnia-net
-      
-  gateway:
-    build:
-      context: ./spring-boot-services
-      dockerfile: Dockerfile.gateway
-    container_name: learnia-gateway
-    ports:
-      - "8080:8080"
-    depends_on:
-      - eureka
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
-      EUREKA_CLIENT_ENABLED: "true"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - learnia-net
-      
-  auth-service:
-    build:
-      context: ./spring-boot-services
-      dockerfile: Dockerfile.auth
-    container_name: learnia-auth-service
-    ports:
-      - "8081:8081"
-    depends_on:
-      - eureka
-      - postgres
-    environment:
-      DB_USERNAME: learnia_user
-      DB_PASSWORD: learnia_pass
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
-      EUREKA_CLIENT_ENABLED: "true"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - learnia-net
-      
-  user-service:
-    build:
-      context: ./spring-boot-services
-      dockerfile: Dockerfile.user
-    container_name: learnia-user-service
-    ports:
-      - "8082:8082"
-    depends_on:
-      - eureka
-      - postgres
-    environment:
-      DB_USERNAME: learnia_user
-      DB_PASSWORD: learnia_pass
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
-      EUREKA_CLIENT_ENABLED: "true"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - learnia-net
 
 networks:
   learnia-net:
@@ -128,3 +61,4 @@ networks:
 
 volumes:
   postgres_data:
+  document_uploads:

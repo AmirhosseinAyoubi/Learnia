@@ -1,0 +1,174 @@
+services:
+
+  # ─────────────────────────────────────────────
+  # Spring Boot — Service Discovery & Gateway
+  # ─────────────────────────────────────────────
+
+  eureka:
+    build:
+      context: ./spring-boot-services
+      dockerfile: Dockerfile.eureka
+    container_name: learnia-eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - learnia-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  gateway:
+    build:
+      context: ./spring-boot-services
+      dockerfile: Dockerfile.gateway
+    container_name: learnia-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka:
+        condition: service_healthy
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      EUREKA_CLIENT_ENABLED: "true"
+    networks:
+      - learnia-net
+
+  # ─────────────────────────────────────────────
+  # Spring Boot — Business Services
+  # ─────────────────────────────────────────────
+
+  auth-service:
+    build:
+      context: ./spring-boot-services
+      dockerfile: Dockerfile.auth
+    container_name: learnia-auth-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      eureka:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: learnia_user
+      DB_PASSWORD: learnia_pass
+      SPRING_DATASOURCE_URL: jdbc:postgresql://learnia-postgres:5432/learnia_auth_db
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      EUREKA_CLIENT_ENABLED: "true"
+      JWT_SECRET: ${JWT_SECRET:-learnia-dev-jwt-secret-32chars-min!!}
+    networks:
+      - learnia-net
+
+  user-service:
+    build:
+      context: ./spring-boot-services
+      dockerfile: Dockerfile.user
+    container_name: learnia-user-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      eureka:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: learnia_user
+      DB_PASSWORD: learnia_pass
+      SPRING_DATASOURCE_URL: jdbc:postgresql://learnia-postgres:5432/learnia_user_db
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      EUREKA_CLIENT_ENABLED: "true"
+    networks:
+      - learnia-net
+
+  document-service:
+    build:
+      context: ./spring-boot-services
+      dockerfile: Dockerfile.document
+    container_name: learnia-document-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      eureka:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: learnia_user
+      DB_PASSWORD: learnia_pass
+      SPRING_DATASOURCE_URL: jdbc:postgresql://learnia-postgres:5432/learnia_document_db
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      EUREKA_CLIENT_ENABLED: "true"
+      RABBITMQ_HOST: learnia-rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+      FILE_UPLOAD_DIR: /app/uploads
+    volumes:
+      - document_uploads:/app/uploads
+    networks:
+      - learnia-net
+
+  # ─────────────────────────────────────────────
+  # Python — AI Pipeline Services
+  # ─────────────────────────────────────────────
+
+  processing-service:
+    build:
+      context: ./python-services/processing-service
+    container_name: learnia-processing-service
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://learnia_user:learnia_pass@learnia-postgres:5432/learnia_document_db
+      RABBITMQ_URL: amqp://guest:guest@learnia-rabbitmq:5672/
+    networks:
+      - learnia-net
+
+  content-service:
+    build:
+      context: ./python-services/content-service
+    container_name: learnia-content-service
+    ports:
+      - "8002:8002"
+    environment:
+      DATABASE_URL: postgresql://learnia_user:learnia_pass@learnia-postgres:5432/learnia_content_db
+    networks:
+      - learnia-net
+
+  ai-service:
+    build:
+      context: ./python-services/ai-service
+    container_name: learnia-ai-service
+    ports:
+      - "8003:8003"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    networks:
+      - learnia-net
+
+  question-service:
+    build:
+      context: ./python-services/question-service
+    container_name: learnia-question-service
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: postgresql://learnia_user:learnia_pass@learnia-postgres:5432/learnia_question_db
+    networks:
+      - learnia-net
+
+  quiz-service:
+    build:
+      context: ./python-services/quiz-service
+    container_name: learnia-quiz-service
+    ports:
+      - "8005:8005"
+    environment:
+      DATABASE_URL: postgresql://learnia_user:learnia_pass@learnia-postgres:5432/learnia_quiz_db
+    networks:
+      - learnia-net
+
+networks:
+  learnia-net:
+    external: true
+
+volumes:
+  document_uploads:
+    external: true
