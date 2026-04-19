@@ -227,3 +227,39 @@ Full end-to-end trace verified:
 - `Document.uploadedBy` is non-nullable but can be omitted by client — pre-existing design gap
 
 **No code changes made.**
+
+---
+
+## [2026-04-19] — Step 3: Backend tests for document-service (Java) and processing-service (Python)
+
+**What was created:**
+
+**Java (`spring-boot-services/learnia-document-service`):**
+- `src/test/resources/application.properties` — test config: H2 in-memory DB, Flyway disabled, Eureka/Config Server disabled, AMQP and Cloud Config auto-configuration excluded, test queue name
+- `src/test/java/com/learnia/document/service/DocumentServiceImplTest.java` — pure Mockito unit tests (no Spring context), 12 test cases covering: `createDocument` saves with PENDING, publishes to RabbitMQ, returns fileUrl in response, continues when RabbitMQ fails; `updateStatus` COMPLETED/FAILED/not-found/null-field preservation; `getAllDocuments` list and empty; `getDocumentById` found/not-found
+- `src/test/java/com/learnia/document/web/DocumentControllerTest.java` — `@WebMvcTest` slice tests, 10 test cases covering: GET all (empty and populated), GET by ID (found/not-found), POST create, POST upload (response shape, timestamp prefix in filename), PATCH status (no-content, with error, not-found)
+
+**Python (`python-services/processing-service`):**
+- `tests/test_processors.py` — 13 test cases: `chunk_text` (empty, whitespace, short, long multi-chunk, per-chunk token limit, token coverage); `extract_text` PDF (2 pages, skip-None pages, all-empty); PPTX (slide count, PPT alias, blank shapes skipped); TXT (page estimation, short=1-page, unsupported type raises ValueError)
+- `tests/test_clients.py` — 7 test cases: `update_document_status` status-only payload, with page_count, with error, correct URL, HTTP error propagates, connection error propagates
+- `tests/test_services.py` — 6 test cases: `process_document` full success flow, PROCESSING marked before extraction, extraction failure → FAILED, chunking failure → FAILED, PROCESSING status failure doesn't abort, empty text still completes
+- `tests/test_consumers.py` — 5 test cases: `_on_message` valid message acks, process failure nacks without requeue, malformed JSON nacks, missing field nacks, correct field values passed through
+
+**Key design decisions:**
+- Java service tests use `ReflectionTestUtils.setField` to inject `@Value("${document.processing.queue}")` without Spring context
+- `@TestPropertySource` on `DocumentControllerTest` provides `file.upload-dir` needed by `@Value` in controller
+- `spring.autoconfigure.exclude` in test `application.properties` prevents AMQP/Config auto-config from firing during web slice tests
+
+**Post-creation fixes applied:**
+- `DocumentServiceImplTest.java` / `DocumentControllerTest.java` — changed individual `ArgumentMatchers` imports to `import static org.mockito.ArgumentMatchers.*`; `DocumentControllerTest` also replaced `Mockito.*` wildcard with explicit `when/verify/doNothing/doThrow` imports to resolve `any()` ambiguity
+- `test_processors.py` — removed unused `import io`, `import textwrap`; replaced `mock_pdf.__enter__ = lambda s: s` (TypeError: 0 args) with `mock_pdf.__enter__.return_value = mock_pdf` in all 3 PDF tests
+- `test_clients.py` — same lambda fix in `_mock_client` helper and `test_raises_on_connection_error`
+
+**Affected files (created):**
+- `src/test/resources/application.properties`
+- `src/test/java/com/learnia/document/service/DocumentServiceImplTest.java`
+- `src/test/java/com/learnia/document/web/DocumentControllerTest.java`
+- `python-services/processing-service/tests/test_processors.py`
+- `python-services/processing-service/tests/test_clients.py`
+- `python-services/processing-service/tests/test_services.py`
+- `python-services/processing-service/tests/test_consumers.py`
