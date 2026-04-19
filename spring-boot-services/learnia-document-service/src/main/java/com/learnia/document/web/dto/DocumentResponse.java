@@ -1,5 +1,6 @@
 package com.learnia.document.web.dto;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class DocumentResponse {
@@ -9,18 +10,31 @@ public class DocumentResponse {
     private String fileName;
     private String fileType;
     private Long fileSize;
+    private String fileUrl;
     private String processingStatus;
+    private LocalDateTime createdAt;
 
     public DocumentResponse() {
     }
 
-    public DocumentResponse(UUID id, String title, String fileName, String fileType, Long fileSize, String processingStatus) {
+    public DocumentResponse(
+            UUID id,
+            String title,
+            String fileName,
+            String fileType,
+            Long fileSize,
+            String fileUrl,
+            String processingStatus,
+            LocalDateTime createdAt
+    ) {
         this.id = id;
         this.title = title;
         this.fileName = fileName;
         this.fileType = fileType;
         this.fileSize = fileSize;
+        this.fileUrl = fileUrl;
         this.processingStatus = processingStatus;
+        this.createdAt = createdAt;
     }
 
     public UUID getId() {
@@ -63,11 +77,27 @@ public class DocumentResponse {
         this.fileSize = fileSize;
     }
 
+    public String getFileUrl() {
+        return fileUrl;
+    }
+
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
+    }
+
     public String getProcessingStatus() {
         return processingStatus;
     }
 
     public void setProcessingStatus(String processingStatus) {
         this.processingStatus = processingStatus;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

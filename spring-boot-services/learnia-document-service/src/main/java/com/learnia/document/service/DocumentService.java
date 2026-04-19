@@ -13,4 +13,6 @@ public interface DocumentService {
     DocumentResponse getDocumentById(UUID id);
 
     DocumentResponse createDocument(CreateDocumentRequest request);
+
+    void updateStatus(UUID id, String status, Integer pageCount, String error);
 }

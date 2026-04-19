@@ -34,6 +34,10 @@ spring:
 file:
   upload-dir: ${FILE_UPLOAD_DIR:/tmp/learnia/uploads}
 
+document:
+  processing:
+    queue: ${DOCUMENT_PROCESSING_QUEUE:document.processing}
+
 eureka:
   client:
     service-url:

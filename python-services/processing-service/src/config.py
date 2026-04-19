@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     rabbitmq_port: int = 5672
     rabbitmq_user: str = "guest"
     rabbitmq_password: str = "guest"
-    rabbitmq_queue: str = "document_processing"
+    rabbitmq_queue: str = "document.processing"
     
     # Document Service URL
     document_service_url: str = "http://localhost:8084"

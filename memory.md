@@ -119,3 +119,111 @@ Checks performed:
 - `pom.xml` has no orphaned dependencies pointing to removed code
 
 **Affected files:** None (verification only)
+
+---
+
+## [2026-04-19] — Step 2 (Java): Document upload + processing foundation
+
+**What changed:** Wired upload → metadata → RabbitMQ pipeline; added processing status callback endpoint.
+
+**Created:**
+- `config/RabbitMQConfig.java` — declares durable queue, sets Jackson JSON message converter on RabbitTemplate
+- `web/dto/UpdateStatusRequest.java` — DTO for Python service to report processing result (status, pageCount, error)
+
+**Modified:**
+- `application.yml` — added `document.processing.queue` property (default: `document.processing`)
+- `web/dto/DocumentResponse.java` — added `fileUrl` field + getter/setter so callers know where the file lives
+- `service/DocumentService.java` — added `updateStatus(UUID, String, Integer, String)` to interface
+- `service/impl/DocumentServiceImpl.java` — injected `RabbitTemplate`; publishes `{documentId, fileUrl, fileType}` message after save; implemented `updateStatus`; extracted `toResponse()` helper; RabbitMQ publish errors are caught and logged, not fatal
+- `web/DocumentController.java` — removed hardcoded `System.getProperty("user.dir")` path; now uses `@Value("${file.upload-dir}")`; upload returns `{fileUrl, fileName}` JSON instead of plain string; added `PATCH /documents/{id}/status` endpoint; removed `@CrossOrigin` (gateway handles CORS)
+
+**Next steps / Warnings:**
+- Python processing-service is still empty — it must consume from queue `document.processing`, extract text, chunk it, and call `PATCH /documents/{id}/status` when done.
+- Upload still uses a timestamp prefix to avoid filename collisions — production should use UUID-named files.
+- `DocumentResponse.fileUrl` is now returned, but the frontend currently ignores it; no frontend change made.
+
+---
+
+## [2026-04-19] — Step 2 (Python): processing-service foundation
+
+**What changed:** Implemented the full document processing pipeline in the previously empty Python service.
+
+**Modified:**
+- `src/config.py` — fixed `rabbitmq_queue` default from `document_processing` to `document.processing` to match Java's published queue name
+
+**Filled in (were empty `__init__.py` stubs):**
+- `src/schemas/__init__.py` — Pydantic models: `ProcessDocumentMessage` (in), `StatusUpdate` (out)
+- `src/processors/__init__.py` — text extraction (PDF via pdfplumber, PPTX via python-pptx, TXT plain read) + tiktoken-based chunking at 512 tokens per chunk
+- `src/clients/__init__.py` — sync `httpx.Client` calling Java `PATCH /documents/{id}/status`
+- `src/services/__init__.py` — orchestration: marks PROCESSING → extract text → chunk → calls COMPLETED or FAILED with page count / error
+- `src/consumers/__init__.py` — pika RabbitMQ consumer with 5-attempt exponential backoff on startup; nacks failed messages without requeue
+- `src/routers/__init__.py` — `POST /api/v1/processing/process` HTTP trigger (uses FastAPI `BackgroundTasks`, non-blocking)
+- `src/main.py` — wires router + starts consumer in daemon thread on `startup` event; logging configured; `allow_credentials: false`
+
+**Flow after this change:**
+```
+RabbitMQ queue: document.processing
+  └─ consumer receives {documentId, fileUrl, fileType}
+       └─ service marks doc PROCESSING
+       └─ processor extracts text + page count from file
+       └─ chunker splits into ≤512-token chunks
+       └─ client PATCHes Java /documents/{id}/status → COMPLETED / FAILED
+```
+
+**Next steps / Warnings:**
+- Chunks are logged but not stored anywhere — content-service integration needed to persist chunks + embeddings.
+- `file_url` is a local filesystem path (`/tmp/learnia/uploads/...`); both Java and Python must share the same filesystem (or object storage in production).
+- RabbitMQ consumer runs in a daemon thread; if it crashes it will not restart — a supervisor or health check should be added for production.
+- `POST /api/v1/processing/process` is open without auth; add API key check when auth propagation is implemented.
+
+---
+
+## [2026-04-19] — Step 2 verification: Java + Python consistency check
+
+**What was checked:** All 13 step-2 files read and cross-verified for import errors, config mismatches, field name mismatches, and integration issues.
+
+**Bugs found and fixed:**
+
+1. `src/services/__init__.py` — **Critical**: relative imports used single dot (`.processors`, `.clients`) which resolved to `src.services.processors` / `src.services.clients` — neither exists. Would have caused `ImportError` at startup. Fixed to `..processors` and `..clients`.
+
+2. `src/processors/__init__.py` — unused `from typing import Optional` import removed.
+
+**Verified correct (no changes):**
+- Queue name: Java publishes to `document.processing`, Python consumes from `document.processing` ✓
+- RabbitMQ message fields: `documentId`, `fileUrl`, `fileType` match on both sides ✓
+- Callback URL: Python calls `{document_service_url}/documents/{id}/status` → matches Java `PATCH /documents/{id}/status` ✓
+- Status payload fields: Python sends `{status, pageCount, error}` → matches Java `UpdateStatusRequest` fields ✓
+- Status enum values: Python sends uppercase `"PROCESSING"` / `"COMPLETED"` / `"FAILED"` → matches Java `ProcessingStatus.valueOf()` ✓
+- All other Python relative imports (`..config`, `..schemas`, `..services`) are correct ✓
+- Java `RabbitTemplate` bean override and `Jackson2JsonMessageConverter` setup are correct ✓
+
+**Affected files:**
+- `src/services/__init__.py` (import bug fix)
+- `src/processors/__init__.py` (unused import removed)
+
+---
+
+## [2026-04-19] — Step 2 completeness check
+
+**Question:** Is step 2 (document upload + processing pipeline) fully done at the code level?
+
+**Answer: Yes.**
+
+Full end-to-end trace verified:
+- Upload → file saved to `${file.upload-dir}`, `{fileUrl, fileName}` returned ✓
+- Metadata POST → DB save → RabbitMQ publish `{documentId, fileUrl, fileType}` ✓
+- Queue name `document.processing` matches on both Java and Python sides ✓
+- Python consumer receives message, calls `process_document` ✓
+- Extractor handles PDF (pdfplumber), PPTX (python-pptx), TXT (plain read) ✓
+- Chunker splits extracted text with tiktoken at 512 tokens ✓
+- Python calls Java `PATCH /documents/{id}/status` with `{status, pageCount, error}` ✓
+- Java `UpdateStatusRequest` fields and `ProcessingStatus.valueOf()` match Python's uppercase strings ✓
+- All required Python libraries present in `requirements.txt` ✓
+- All Java beans wired: `RabbitTemplate`, `Jackson2JsonMessageConverter`, `@Value` properties ✓
+- No Flyway migration files — harmless (Flyway 9.x succeeds with 0 migrations; schema via `ddl-auto: update`) ✓
+
+**Pre-existing issues (not step 2, not fixed):**
+- Gateway routes `/api/v1/documents/**` but service maps to `/documents` — affects frontend, not processing pipeline
+- `Document.uploadedBy` is non-nullable but can be omitted by client — pre-existing design gap
+
+**No code changes made.**
