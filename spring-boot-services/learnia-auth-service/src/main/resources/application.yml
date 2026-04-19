@@ -2,7 +2,6 @@ spring:
   application:
     name: auth-service
 
-  # Disable config server until it's running
   cloud:
     config:
       enabled: false
@@ -16,11 +15,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
         jdbc:
           time_zone: UTC
     open-in-view: false
@@ -33,17 +31,9 @@ server:
 
 eureka:
   client:
-    enabled: false   # also disable Eureka until it's running
+    enabled: false
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
-# JWT configuration
-# In production, override JWT_SECRET with a strong random secret (>= 32 chars)
-jwt:
-  secret: ${JWT_SECRET:learnia-dev-jwt-secret-32chars-min!!}
-  access-token-ttl-minutes: 15
-
-# CORS: comma-separated list of allowed origins
 cors:
   allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
-
