@@ -75,8 +75,7 @@ services:
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
       EUREKA_CLIENT_ENABLED: "true"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      PROCESSING_SERVICE_URL: http://processing-service:8001
     networks:
       - learnia-net
       
@@ -122,9 +121,62 @@ services:
     networks:
       - learnia-net
 
+  document-service:
+    build:
+      context: ./spring-boot-services
+      dockerfile: Dockerfile.document
+    container_name: learnia-document-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka:
+        condition: service_started
+    environment:
+      DB_USERNAME: learnia_user
+      DB_PASSWORD: learnia_pass
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/learnia_document_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+      FILE_UPLOAD_DIR: /app/uploads
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+      EUREKA_CLIENT_ENABLED: "true"
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - learnia-net
+
+  processing-service:
+    build:
+      context: ./python-services/processing-service
+      dockerfile: Dockerfile
+    container_name: learnia-processing-service
+    ports:
+      - "8001:8001"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_QUEUE: document.processing
+      DOCUMENT_SERVICE_URL: http://document-service:8084
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - learnia-net
+
 networks:
   learnia-net:
     driver: bridge
 
 volumes:
   postgres_data:
+  uploads_data:

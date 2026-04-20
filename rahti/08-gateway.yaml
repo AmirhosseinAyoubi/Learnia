@@ -1,0 +1,86 @@
+# Build image: docker build -f spring-boot-services/Dockerfile.gateway spring-boot-services/ -t <registry>/learnia/gateway:latest
+# Push to registry, then update 'image' below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: learnia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: image-registry.openshift-image-registry.svc:5000/learnia/gateway:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+            - name: EUREKA_CLIENT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: EUREKA_CLIENT_ENABLED
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+            - name: PROCESSING_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: PROCESSING_SERVICE_URL
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: learnia
+spec:
+  selector:
+    app: gateway
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+# OpenShift Route — exposes the gateway externally with TLS.
+# Host will be auto-assigned as: gateway-learnia.apps.2.rahti.csc.fi
+# Or set a custom host below.
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: gateway
+  namespace: learnia
+spec:
+  to:
+    kind: Service
+    name: gateway
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

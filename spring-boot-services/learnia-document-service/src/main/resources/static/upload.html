@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document Upload</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #eef2ff, #f8fafc);
+            color: #1f2937;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.10);
+            padding: 32px;
+        }
+
+        .title {
+            margin: 0 0 8px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            margin: 0 0 24px;
+            color: #6b7280;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .drop-zone {
+            border: 2px dashed #94a3b8;
+            border-radius: 16px;
+            padding: 28px 20px;
+            text-align: center;
+            background: #f8fafc;
+            transition: 0.2s ease;
+            cursor: pointer;
+        }
+
+        .drop-zone.dragover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .drop-zone-icon {
+            font-size: 34px;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone-text {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-subtext {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 18px;
+            padding: 14px 16px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 6px;
+            word-break: break-word;
+        }
+
+        .file-size {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 22px;
+        }
+
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 13px 18px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .primary-btn {
+            background: #2563eb;
+            color: white;
+            flex: 1;
+        }
+
+        .primary-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .primary-btn:disabled {
+            background: #93c5fd;
+            cursor: not-allowed;
+        }
+
+        .secondary-btn {
+            background: #e5e7eb;
+            color: #111827;
+        }
+
+        .secondary-btn:hover {
+            background: #d1d5db;
+        }
+
+        .status {
+            margin-top: 18px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            display: none;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .status.success {
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status.loading {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1 class="title">Upload Document</h1>
+    <p class="subtitle">
+        Choose a file or drag and drop it below to upload it to the document service.
+    </p>
+    <input type="text" id="titleInput" placeholder="Enter document title" style="width: 100%; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #d1d5db; border-radius: 12px; font-size: 14px;" />
+    <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-icon">📄</div>
+        <div class="drop-zone-text">Drag & drop your file here</div>
+        <div class="drop-zone-subtext">or click to browse from your computer</div>
+        <input class="file-input" type="file" id="fileInput" />
+    </div>
+
+    <div class="file-info" id="fileInfo">
+        <div class="file-name" id="fileName"></div>
+        <div class="file-size" id="fileSize"></div>
+    </div>
+
+    <div class="actions">
+        <button class="primary-btn" id="uploadBtn" disabled>Upload File</button>
+        <button class="secondary-btn" id="clearBtn" type="button">Clear</button>
+    </div>
+
+    <div class="status" id="statusBox"></div>
+</div>
+
+<script>
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const titleInput = document.getElementById("titleInput");
+    const fileInfo = document.getElementById("fileInfo");
+    const fileName = document.getElementById("fileName");
+    const fileSize = document.getElementById("fileSize");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const statusBox = document.getElementById("statusBox");
+
+    let selectedFile = null;
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(2) + " " + sizes[i];
+    }
+
+    function showStatus(message, type) {
+        statusBox.style.display = "block";
+        statusBox.className = "status " + type;
+        statusBox.textContent = message;
+    }
+
+    function clearStatus() {
+        statusBox.style.display = "none";
+        statusBox.textContent = "";
+        statusBox.className = "status";
+    }
+
+    function updateFileUI(file) {
+        selectedFile = file;
+
+        if (file) {
+            fileInfo.style.display = "block";
+            fileName.textContent = file.name;
+            fileSize.textContent = formatBytes(file.size);
+            uploadBtn.disabled = false;
+        } else {
+            fileInfo.style.display = "none";
+            fileName.textContent = "";
+            fileSize.textContent = "";
+            uploadBtn.disabled = true;
+        }
+    }
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (event) => {
+        clearStatus();
+        const file = event.target.files[0];
+        updateFileUI(file || null);
+    });
+
+    dropZone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dropZone.classList.remove("dragover");
+        clearStatus();
+
+        const file = event.dataTransfer.files[0];
+        if (file) {
+            fileInput.files = event.dataTransfer.files;
+            updateFileUI(file);
+        }
+    });
+
+    clearBtn.addEventListener("click", () => {
+        fileInput.value = "";
+        selectedFile = null;
+        updateFileUI(null);
+        clearStatus();
+    });
+
+    uploadBtn.addEventListener("click", async () => {
+        if (!selectedFile) {
+            showStatus("Please choose a file first.", "error");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("title", titleInput.value);
+
+        showStatus("Uploading file...", "loading");
+        uploadBtn.disabled = true;
+
+        try {
+            const response = await fetch("/documents/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            const resultText = await response.text();
+
+            if (response.ok) {
+                showStatus(resultText, "success");
+            } else {
+                showStatus("Upload failed:\n" + resultText, "error");
+            }
+        } catch (error) {
+            showStatus("Upload failed:\n" + error.message, "error");
+        } finally {
+            if (selectedFile) {
+                uploadBtn.disabled = false;
+            }
+        }
+    });
+</script>
+</body>
+</html>

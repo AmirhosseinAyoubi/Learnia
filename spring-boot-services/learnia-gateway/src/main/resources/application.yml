@@ -21,12 +21,12 @@ spring:
           predicates:
             - Path=/api/v1/courses/**
         - id: document-service
-          uri: lb://DOCUMENT-SERVICE
+          uri: lb://LEARNIA-DOCUMENT-SERVICE
           predicates:
             - Path=/api/v1/documents/**
-        # Python Services (Assume running on host machine)
+        # Python Services
         - id: processing-service
-          uri: http://host.docker.internal:8001
+          uri: ${PROCESSING_SERVICE_URL:http://host.docker.internal:8001}
           predicates:
             - Path=/api/v1/processing/**
         - id: content-service

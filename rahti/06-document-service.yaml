@@ -1,0 +1,115 @@
+# Build image: docker build -f spring-boot-services/Dockerfile.document spring-boot-services/ -t <registry>/learnia/document-service:latest
+# Push to registry, then update 'image' below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: document-service
+  namespace: learnia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: document-service
+  template:
+    metadata:
+      labels:
+        app: document-service
+    spec:
+      containers:
+        - name: document-service
+          image: image-registry.openshift-image-registry.svc:5000/learnia/document-service:latest
+          ports:
+            - containerPort: 8084
+          env:
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: SPRING_DATASOURCE_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-db-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-db-secret
+                  key: password
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-rabbitmq-secret
+                  key: password
+            - name: FILE_UPLOAD_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: FILE_UPLOAD_DIR
+            - name: DOCUMENT_PROCESSING_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: DOCUMENT_PROCESSING_QUEUE
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+            - name: EUREKA_CLIENT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: EUREKA_CLIENT_ENABLED
+            - name: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: document-service
+  namespace: learnia
+spec:
+  selector:
+    app: document-service
+  ports:
+    - port: 8084
+      targetPort: 8084

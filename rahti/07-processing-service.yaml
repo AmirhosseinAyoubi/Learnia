@@ -1,0 +1,92 @@
+# Build image: docker build python-services/processing-service/ -t <registry>/learnia/processing-service:latest
+# Push to registry, then update 'image' below.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: processing-service
+  namespace: learnia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: processing-service
+  template:
+    metadata:
+      labels:
+        app: processing-service
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: document-service
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: processing-service
+          image: image-registry.openshift-image-registry.svc:5000/learnia/processing-service:latest
+          ports:
+            - containerPort: 8001
+          env:
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_QUEUE
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: RABBITMQ_QUEUE
+            - name: RABBITMQ_USER
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-rabbitmq-secret
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-rabbitmq-secret
+                  key: password
+            - name: DOCUMENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: DOCUMENT_SERVICE_URL
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: processing-service
+  namespace: learnia
+spec:
+  selector:
+    app: processing-service
+  ports:
+    - port: 8001
+      targetPort: 8001

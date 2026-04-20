@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: learnia-config
+  namespace: learnia
+data:
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_QUEUE: document.processing
+  DOCUMENT_PROCESSING_QUEUE: document.processing
+  FILE_UPLOAD_DIR: /app/uploads
+  DOCUMENT_SERVICE_URL: http://document-service:8084
+  PROCESSING_SERVICE_URL: http://processing-service:8001
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka:8761/eureka/
+  EUREKA_CLIENT_ENABLED: "true"
+  EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/learnia_document_db

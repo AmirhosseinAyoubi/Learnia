@@ -1,0 +1,16 @@
+# Shared volume for uploaded files.
+# RWO (Cinder CSI, the only storage class on Rahti 2).
+# Both document-service and processing-service must run on the same node
+# (enforced via podAffinity in 07-processing-service.yaml).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads-pvc
+  namespace: learnia
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard-csi
+  resources:
+    requests:
+      storage: 10Gi
