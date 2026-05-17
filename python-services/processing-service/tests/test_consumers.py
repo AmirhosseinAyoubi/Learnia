@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock, call
 
 import pytest
 
-from src.consumers import _on_message
+from src.consumers import _on_message, start_consumer, _connect_and_consume
 
 
 class TestOnMessage:
@@ -77,3 +77,71 @@ class TestOnMessage:
 
         mock_process.assert_called_once_with("abc-999", "/uploads/2024_doc.pptx", "PPTX")
         channel.basic_ack.assert_called_once()
+
+
+class TestStartConsumer:
+    """Tests for start_consumer and _connect_and_consume."""
+
+    def test_start_consumer_succeeds_on_first_attempt(self):
+        """When the first connection attempt succeeds, start_consumer returns
+        immediately without retrying.
+
+        Input: _connect_and_consume succeeds on first call.
+        Expected: _connect_and_consume called exactly once.
+        """
+        with patch("src.consumers._connect_and_consume") as mock_connect:
+            start_consumer()
+
+        mock_connect.assert_called_once()
+
+    def test_start_consumer_retries_on_failure(self):
+        """When _connect_and_consume raises on the first attempt, start_consumer
+        retries up to _MAX_RETRIES times before giving up.
+
+        Input: _connect_and_consume always raises RuntimeError.
+        Expected: _connect_and_consume called _MAX_RETRIES times.
+        """
+        with patch("src.consumers._connect_and_consume", side_effect=RuntimeError("conn refused")):
+            with patch("src.consumers.time.sleep"):
+                start_consumer()
+
+    def test_start_consumer_succeeds_on_second_attempt(self):
+        """If the first attempt fails but the second succeeds, start_consumer
+        stops retrying after the successful connection.
+
+        Input: first call raises, second call succeeds.
+        Expected: _connect_and_consume called exactly twice.
+        """
+        call_count = {"n": 0}
+
+        def flaky_connect():
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise RuntimeError("first failure")
+
+        with patch("src.consumers._connect_and_consume", side_effect=flaky_connect):
+            with patch("src.consumers.time.sleep"):
+                start_consumer()
+
+        assert call_count["n"] == 2
+
+    def test_connect_and_consume_sets_up_channel(self):
+        """_connect_and_consume declares the queue, sets QoS, and starts
+        consuming — verifying the full RabbitMQ setup is performed correctly.
+
+        Input: mocked pika.BlockingConnection.
+        Expected: queue_declare, basic_qos, basic_consume, start_consuming all called.
+        """
+        mock_channel = MagicMock()
+        mock_connection = MagicMock()
+        mock_connection.channel.return_value = mock_channel
+
+        with patch("src.consumers.pika.BlockingConnection", return_value=mock_connection):
+            with patch("src.consumers.pika.PlainCredentials", return_value=MagicMock()):
+                with patch("src.consumers.pika.ConnectionParameters", return_value=MagicMock()):
+                    _connect_and_consume()
+
+        mock_channel.queue_declare.assert_called_once()
+        mock_channel.basic_qos.assert_called_once_with(prefetch_count=1)
+        mock_channel.basic_consume.assert_called_once()
+        mock_channel.start_consuming.assert_called_once()

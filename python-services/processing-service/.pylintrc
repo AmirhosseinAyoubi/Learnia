@@ -1,0 +1,11 @@
+[MASTER]
+# Allow use of broad-except in error-handling boundaries (RabbitMQ, HTTP clients)
+# and too-few-public-methods on Pydantic/config classes.
+
+[FORMAT]
+max-line-length=100
+
+[MESSAGES CONTROL]
+disable=
+    R0903,
+    W0703
