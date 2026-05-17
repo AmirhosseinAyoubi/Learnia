@@ -78,6 +78,14 @@ public class DocumentServiceImpl implements DocumentService {
         log.debug("Updated document {} status to {}", id, status);
     }
 
+    @Override
+    public void deleteDocument(UUID id) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Document not found: " + id));
+        documentRepository.delete(document);
+        log.info("Deleted document id={}", id);
+    }
+
     private void publishProcessingJob(Document document) {
         try {
             Map<String, Object> message = new HashMap<>();

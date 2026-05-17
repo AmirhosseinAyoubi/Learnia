@@ -15,4 +15,6 @@ public interface DocumentService {
     DocumentResponse createDocument(CreateDocumentRequest request);
 
     void updateStatus(UUID id, String status, Integer pageCount, String error);
+
+    void deleteDocument(UUID id);
 }

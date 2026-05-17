@@ -24,6 +24,8 @@ spring:
           uri: lb://LEARNIA-DOCUMENT-SERVICE
           predicates:
             - Path=/api/v1/documents/**
+          filters:
+            - RewritePath=/api/v1/documents(?<segment>.*), /documents${segment}
         # Python Services
         - id: processing-service
           uri: ${PROCESSING_SERVICE_URL:http://host.docker.internal:8001}
