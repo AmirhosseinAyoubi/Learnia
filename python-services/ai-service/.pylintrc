@@ -1,0 +1,11 @@
+[MASTER]
+# Allow use of broad-except in auth/HTTP boundaries and
+# too-few-public-methods on Pydantic/config classes.
+
+[FORMAT]
+max-line-length=100
+
+[MESSAGES CONTROL]
+disable=
+    R0903,
+    W0703
