@@ -26,6 +26,18 @@ spec:
       labels:
         app: rabbitmq
     spec:
+      initContainers:
+        - name: fix-cookie-perms
+          image: image-registry.openshift-image-registry.svc:5000/learnia/rabbitmq:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              if [ -f /var/lib/rabbitmq/.erlang.cookie ]; then
+                chmod 400 /var/lib/rabbitmq/.erlang.cookie
+              fi
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
       containers:
         - name: rabbitmq
           image: image-registry.openshift-image-registry.svc:5000/learnia/rabbitmq:latest

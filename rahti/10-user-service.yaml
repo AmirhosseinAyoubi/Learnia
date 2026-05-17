@@ -1,28 +1,36 @@
-# Build image: docker build -f spring-boot-services/Dockerfile.gateway spring-boot-services/ -t <registry>/learnia/gateway:latest
-# Push to registry, then update 'image' below.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gateway
+  name: user-service
   namespace: learnia
 spec:
   replicas: 1
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
-      app: gateway
+      app: user-service
   template:
     metadata:
       labels:
-        app: gateway
+        app: user-service
     spec:
       containers:
-        - name: gateway
-          image: image-registry.openshift-image-registry.svc:5000/learnia/gateway:latest
+        - name: user-service
+          image: image-registry.openshift-image-registry.svc:5000/learnia/user-service:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8082
           env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/learnia_user_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-db-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-db-secret
+                  key: password
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               valueFrom:
                 configMapKeyRef:
@@ -38,16 +46,6 @@ spec:
                 configMapKeyRef:
                   name: learnia-config
                   key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
-            - name: PROCESSING_SERVICE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: learnia-config
-                  key: PROCESSING_SERVICE_URL
-            - name: AUTH_SERVICE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: learnia-config
-                  key: AUTH_SERVICE_URL
           resources:
             requests:
               memory: 256Mi
@@ -58,36 +56,34 @@ spec:
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: 8082
             initialDelaySeconds: 40
             periodSeconds: 10
+            failureThreshold: 6
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: gateway
+  name: user-service
   namespace: learnia
 spec:
   selector:
-    app: gateway
+    app: user-service
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: 8082
+      targetPort: 8082
 ---
-# OpenShift Route — exposes the gateway externally with TLS.
-# Host will be auto-assigned as: gateway-learnia.apps.2.rahti.csc.fi
-# Or set a custom host below.
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: gateway
+  name: user-service
   namespace: learnia
 spec:
   to:
     kind: Service
-    name: gateway
+    name: user-service
   port:
-    targetPort: 8080
+    targetPort: 8082
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect

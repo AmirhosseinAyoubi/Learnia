@@ -58,6 +58,21 @@ spec:
                 configMapKeyRef:
                   name: learnia-config
                   key: DOCUMENT_SERVICE_URL
+            - name: CONTENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: CONTENT_SERVICE_URL
+            - name: AI_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: learnia-config
+                  key: AI_SERVICE_URL
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: learnia-internal-secret
+                  key: api_key
           resources:
             requests:
               memory: 512Mi
@@ -90,3 +105,18 @@ spec:
   ports:
     - port: 8001
       targetPort: 8001
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: processing-service
+  namespace: learnia
+spec:
+  to:
+    kind: Service
+    name: processing-service
+  port:
+    targetPort: 8001
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

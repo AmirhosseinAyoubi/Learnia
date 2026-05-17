@@ -15,3 +15,7 @@ data:
   EUREKA_CLIENT_ENABLED: "true"
   EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
   SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/learnia_document_db
+  AUTH_SERVICE_URL: http://auth-service:8081
+  CONTENT_SERVICE_URL: http://content-service:8002
+  AI_SERVICE_URL: http://ai-service:8003
+  CONTENT_DATABASE_URL: postgresql://sahar:123Sahar%24@postgres:5432/learnia_content_db

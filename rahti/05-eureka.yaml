@@ -48,3 +48,18 @@ spec:
   ports:
     - port: 8761
       targetPort: 8761
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: eureka
+  namespace: learnia
+spec:
+  to:
+    kind: Service
+    name: eureka
+  port:
+    targetPort: 8761
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
