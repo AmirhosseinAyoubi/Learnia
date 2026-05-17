@@ -304,35 +304,116 @@ Make sure the gateway is running on port 8080 before starting the client.
 
 ## 9. Running Tests
 
-### Java — document-service
+### Prerequisites
+
+Install service dependencies (once per virtualenv):
 
 ```bash
-cd spring-boot-services
-mvn test -pl learnia-document-service
+# Processing service
+cd python-services/processing-service && pip install -r requirements.txt && cd ../..
+
+# Content service
+cd python-services/content-service && pip install -r requirements.txt && cd ../..
+
+# AI service
+cd python-services/ai-service && pip install -r requirements.txt && cd ../..
 ```
 
-Test classes:
-- `DocumentServiceImplTest` — 12 unit tests for the service layer (Mockito, no Spring context)
-- `DocumentControllerTest` — 10 integration tests for the REST layer (`@WebMvcTest`)
-
-Test configuration uses H2 in-memory database with Flyway disabled. RabbitMQ and Eureka are excluded from the test context.
+---
 
 ### Python — processing-service
 
 ```bash
 cd python-services/processing-service
-source .venv/bin/activate
-pip install pytest
-pytest tests/ -v
+pytest --cov=src --cov-report=term-missing
 ```
 
 Test files:
-- `tests/test_processors.py` — 13 tests (text extraction and chunking logic)
-- `tests/test_clients.py` — 7 tests (HTTP callback client)
-- `tests/test_services.py` — 6 tests (process_document orchestration)
-- `tests/test_consumers.py` — 5 tests (RabbitMQ consumer callback)
+
+| File | Tests | What is covered |
+|---|---|---|
+| `tests/test_processors.py` | 13 | PDF/PPTX/TXT extraction, tiktoken chunking |
+| `tests/test_clients.py` | 13 | PATCH status, POST chunks, POST AI trigger |
+| `tests/test_services.py` | 8 | Full pipeline orchestration, failure paths |
+| `tests/test_consumers.py` | 5 | RabbitMQ ACK/NACK on success and errors |
 
 All external dependencies (RabbitMQ, HTTP, file I/O) are mocked using `unittest.mock`.
+
+---
+
+### Python — content-service
+
+```bash
+cd python-services/content-service
+pytest --cov=src --cov-report=term-missing
+```
+
+Test files:
+
+| File | Tests | What is covered |
+|---|---|---|
+| `tests/test_routers.py` | 14 | All 6 HTTP endpoints including DELETE and 422 error cases |
+| `tests/test_crud.py` | 12 | Save/get/delete for chunks and materials (SQLite in-memory) |
+| `tests/test_auth.py` | 4 | Valid key, invalid key (401), service down (503), 403→401 mapping |
+
+---
+
+### Python — ai-service
+
+```bash
+cd python-services/ai-service
+pytest --cov=src --cov-report=term-missing
+```
+
+Test files:
+
+| File | Tests | What is covered |
+|---|---|---|
+| `tests/test_routers.py` | 9 | POST analyze (success/no-chunks/OpenAI-error), GET and DELETE materials |
+| `tests/test_services.py` | 4 | OpenAI call, text truncation, empty chunks, error propagation |
+| `tests/test_clients.py` | 8 | get_chunks, save_material, get_materials, delete_materials |
+| `tests/test_auth.py` | 4 | Same auth validation pattern as content-service |
+
+---
+
+### Java — all services
+
+```bash
+cd spring-boot-services
+
+# All services at once
+mvn test
+
+# Individual services
+mvn test -pl learnia-auth-service
+mvn test -pl learnia-user-service
+mvn test -pl learnia-document-service
+```
+
+| Service | Test classes | Tests |
+|---|---|---|
+| auth-service | `ApiKeyControllerTest` | 8 (`@WebMvcTest`) |
+| user-service | `UserControllerTest`, `DefaultUserServiceTest` | 10 + 10 |
+| document-service | `DocumentControllerTest`, `DocumentServiceImplTest` | 12 + 12 |
+
+Test configuration: H2 in-memory database, Flyway disabled, RabbitMQ and Eureka mocked out.
+
+---
+
+### Running PyLint
+
+Check Python code quality (target: score ≥ 9.0):
+
+```bash
+# Processing service
+cd python-services/processing-service && pylint src/
+
+# Content service
+cd python-services/content-service && pylint src/
+
+# AI service
+cd python-services/ai-service && pylint src/
+```
 
 ---
 
@@ -456,6 +537,88 @@ All traffic enters through the gateway. TLS is terminated at the OpenShift Route
 | `POST` | `/api/v1/documents` | Create a document record and trigger processing |
 | `PATCH` | `/api/v1/documents/{id}/status` | Update processing status (called by processing-service) |
 | `DELETE` | `/api/v1/documents/{id}` | Delete a document |
+
+---
+
+## 13. Functional Testing
+
+### What the functional tests cover
+
+Every HTTP endpoint is tested at the router level using FastAPI's `TestClient` (an in-process HTTP client that exercises the full request/response cycle without a real network socket). Each test class covers:
+
+- **Success path** — correct input → expected status code and response body
+- **Error cases** — missing required fields → 422; missing API key → 422; resource not found → 404; OpenAI failure → 500; auth service down → 503
+
+### Main errors detected through testing
+
+| Error | Endpoint | Root cause | How detected |
+|---|---|---|---|
+| `422 Unprocessable Entity` | `POST /api/v1/content/chunks` | `document_id` not provided | Schema validation test with missing field |
+| `404 Not Found` | `GET /api/v1/ai/materials/{id}` | No materials generated yet | Empty mock return value test |
+| `401 Unauthorized` | All protected endpoints | Invalid / revoked API key | Auth mock returning 401 |
+| `503 Service Unavailable` | All protected endpoints | auth-service unreachable | Auth mock raising `ConnectError` |
+| `500 Internal Server Error` | `POST /api/v1/ai/analyze` | OpenAI rate limit or timeout | Service mock raising `Exception` |
+| `404 Not Found` | `POST /api/v1/ai/analyze` | No chunks stored for document | `get_chunks` returns empty list |
+
+### Swagger UI (interactive REST client)
+
+Each service exposes a Swagger UI when running locally:
+
+| Service | URL |
+|---|---|
+| Auth service | `http://localhost:8081/swagger-ui.html` |
+| User service | `http://localhost:8082/swagger-ui.html` |
+| Document service | `http://localhost:8084/swagger-ui.html` |
+| Processing service | `http://localhost:8001/docs` |
+| Content service | `http://localhost:8002/docs` |
+| AI service | `http://localhost:8003/docs` |
+
+On Rahti (public):
+
+| Service | Swagger URL |
+|---|---|
+| Auth service | `https://auth-service-learnia.2.rahtiapp.fi/swagger-ui.html` |
+| Document service | `https://document-service-learnia.2.rahtiapp.fi/swagger-ui.html` |
+
+All protected endpoints require the `X-API-Key` header. Create a key first via `POST /api/v1/auth/keys` (no key required) then pass it in the Swagger "Authorize" dialog.
+
+---
+
+## 14. External Libraries
+
+### Python services
+
+| Library | Version | Purpose |
+|---|---|---|
+| `fastapi` | 0.104.1 | Web framework — routing, dependency injection, validation |
+| `uvicorn[standard]` | 0.24.0 | ASGI server |
+| `pydantic` | 2.5.0 | Request/response data validation and serialisation |
+| `pydantic-settings` | 2.1.0 | Environment-variable-based configuration |
+| `sqlalchemy` | 2.0.23 | ORM for PostgreSQL (content-service) |
+| `psycopg2-binary` | 2.9.9 | PostgreSQL driver |
+| `openai` | 1.3.0 | OpenAI GPT-4o-mini API client (ai-service) |
+| `tiktoken` | 0.5.1 | Token counting for text chunking (processing-service) |
+| `pdfplumber` | 0.10.3 | PDF text extraction |
+| `python-pptx` | 0.6.23 | PowerPoint text extraction |
+| `pika` | 1.3.2 | RabbitMQ client |
+| `httpx` | 0.25.1 | Async/sync HTTP client for service-to-service calls |
+| `pytest` | 7.4.3 | Test runner |
+| `pytest-cov` | 4.1.0 | Coverage measurement |
+| `pytest-asyncio` | 0.21.1 | Async test support |
+| `pylint` | 3.0.3 | Static analysis (target score ≥ 9.0) |
+
+### Java services (key dependencies)
+
+| Library | Version | Purpose |
+|---|---|---|
+| Spring Boot | 3.2.x | Application framework |
+| Spring Cloud Gateway | 4.1.x | API gateway with reactive WebFlux |
+| Spring Cloud Netflix Eureka | 4.1.x | Service discovery |
+| springdoc-openapi-webmvc-ui | 2.3.0 | Swagger UI generation |
+| Spring AMQP / RabbitMQ | 3.1.x | Message queue integration |
+| Spring Data JPA | 3.2.x | ORM for PostgreSQL |
+| H2 Database | 2.2.x | In-memory DB for unit tests |
+| Mockito | 5.x | Mocking framework for unit tests |
 
 ---
 
