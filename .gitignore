@@ -23,6 +23,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop-eggs/
@@ -78,3 +79,13 @@ temp/
 *.tmp
 
 uploads
+
+# Claude Code internal data
+.claude/
+memory.md
+
+# R artifacts
+.Rhistory
+
+# Secrets (never commit)
+rahti/00-secrets.yaml
