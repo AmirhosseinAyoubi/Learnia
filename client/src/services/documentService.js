@@ -1,6 +1,7 @@
 /**
  * Document Service
  */
+import axios from 'axios'
 import apiClient from './api'
 
 export const documentService = {
@@ -16,16 +17,17 @@ export const documentService = {
     return response.data
   },
 
-  uploadDocument: async (file, courseId) => {
+  uploadDocument: async (file, title, courseId) => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('courseId', courseId)
-    
-    const response = await apiClient.post('/api/v1/documents', formData, {
+    formData.append('title', title)
+
+    const response = await axios.post('http://localhost:8084/documents/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
+
     return response.data
   },
 }
