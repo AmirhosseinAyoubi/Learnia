@@ -18,8 +18,14 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import static org.hamcrest.Matchers.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -83,12 +89,12 @@ class DocumentControllerTest {
     }
 
     @Test
-    void getDocumentById_throwsWhenNotFound() throws Exception {
+    void getDocumentById_throwsWhenNotFound() {
         UUID id = UUID.randomUUID();
         when(documentService.getDocumentById(id)).thenThrow(new RuntimeException("Document not found: " + id));
 
-        mockMvc.perform(get("/documents/" + id))
-                .andExpect(status().is5xxServerError());
+        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () ->
+                mockMvc.perform(get("/documents/" + id)));
     }
 
     // ---- POST /documents ----
@@ -106,7 +112,7 @@ class DocumentControllerTest {
         mockMvc.perform(post("/documents")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title", is("New Doc")))
                 .andExpect(jsonPath("$.processingStatus", is("PENDING")));
     }
@@ -185,10 +191,33 @@ class DocumentControllerTest {
         doThrow(new RuntimeException("Document not found: " + id))
                 .when(documentService).updateStatus(any(), any(), any(), any());
 
-        mockMvc.perform(patch("/documents/" + id + "/status")
+        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () ->
+                mockMvc.perform(patch("/documents/" + id + "/status")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().is5xxServerError());
+                        .content(objectMapper.writeValueAsString(req))));
+    }
+
+    // ---- DELETE /documents/{id} ----
+
+    @Test
+    void deleteDocument_returnsNoContent() throws Exception {
+        UUID id = UUID.randomUUID();
+        doNothing().when(documentService).deleteDocument(id);
+
+        mockMvc.perform(delete("/documents/" + id))
+                .andExpect(status().isNoContent());
+
+        verify(documentService).deleteDocument(id);
+    }
+
+    @Test
+    void deleteDocument_throwsWhenNotFound() {
+        UUID id = UUID.randomUUID();
+        doThrow(new RuntimeException("Document not found: " + id))
+                .when(documentService).deleteDocument(id);
+
+        org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () ->
+                mockMvc.perform(delete("/documents/" + id)));
     }
 
     // ---- helper ----
